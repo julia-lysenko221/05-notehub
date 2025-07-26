@@ -1,27 +1,80 @@
-// import { useState, useEffect } from "react";
-// import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useDebounce } from "use-debounce";
+import type { Note } from "../../types/note";
+import css from "./App.module.css";
+import ErrorMessage from "../ErrorMessage/ErrorMessage";
+import Loader from "../Loader/Loader";
+import Modal from "../Modal/Modal";
+import NoteForm from "../NoteForm/NoteForm";
+import NoteList from "../NoteList/NoteList";
+import SearchBox from "../SearchBox/SearchBox";
+import Pagination from "../Pagination/Pagination";
+import { fetchNotes } from "../../services/noteService";
+import toast from "react-hot-toast";
 
-// import css from "./App.module.css";
-// import ErrorMessage from "../ErrorMessage/ErrorMessage";
-// import Loader from "../Loader/Loader";
-// import Modal from "../Modal/Modal";
-// import NoteForm from "../NoteForm/NoteForm";
-// import NoteList from "../NoteList/NoteList";
-// import SearchBox from "../SearchBox/SearchBox";
-// import Pagination from "../Pagination/Pagination";
+interface FetchNoteResponse {
+  notes: Note[];
+  total: number;
+  page: number;
+  perPage: number;
+}
 
-// export default function App() {
-//   return (
-//     <div className={css.app}>
-//       <header className={css.toolbar}>
-//         {<SearchBox />}
-//         {<Pagination />}
-//         {<button className={css.button}>Create note +</button>}
-//       </header>
+export default function App() {
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [debouncedSearch] = useDebounce(search, 500);
+  const perPage = 12;
 
-//       <NoteList />
-//       <NoteForm />
-//       <Modal />
-//     </div>
-//   );
-// }
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const { data, isLoading, isError, isSuccess } = useQuery<FetchNoteResponse>({
+    queryKey: ["notes", page, debouncedSearch],
+    queryFn: () => fetchNotes(page, perPage, debouncedSearch),
+
+    placeholderData: keepPreviousData,
+  });
+
+  const openModal = () => setModalOpen(true);
+  const closeModal = () => setModalOpen(false);
+
+  useEffect(() => {
+    if (isSuccess && data?.notes.length === 0) {
+      toast.error("No notes found for your request.");
+    }
+  }, [isSuccess, data]);
+
+  return (
+    <div className={css.app}>
+      <header className={css.toolbar}>
+        <SearchBox value={search} onChange={setSearch} />
+
+        {data && data.total > perPage && (
+          <Pagination
+            pageCount={Math.ceil(data.total / perPage)}
+            currentPage={page}
+            onPageChange={setPage}
+          />
+        )}
+
+        <button className={css.button} onClick={openModal}>
+          Create note +
+        </button>
+      </header>
+
+      {isLoading && <Loader />}
+      {isError && <ErrorMessage />}
+
+      {data && data.notes.length > 0 && <NoteList notes={data.notes} />}
+
+      {isModalOpen && (
+        <Modal onClose={closeModal}>
+          <NoteForm onClose={closeModal} />
+        </Modal>
+      )}
+    </div>
+  );
+}
