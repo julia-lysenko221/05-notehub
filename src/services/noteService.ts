@@ -1,14 +1,7 @@
 import axios from "axios";
-import type { Note, NewNoteData } from "../types/note";
+import type { Note, NewNoteData, FetchNotesResponse } from "../types/note";
 
 const token = import.meta.env.VITE_NOTEHUB_TOKEN;
-
-interface FetchNotesResponse {
-  notes: Note[];
-  total: number;
-  page: number;
-  perPage: number;
-}
 
 const instance = axios.create({
   baseURL: "https://notehub-public.goit.study/api",
