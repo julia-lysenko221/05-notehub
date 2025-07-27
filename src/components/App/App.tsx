@@ -12,7 +12,12 @@ import SearchBox from "../SearchBox/SearchBox";
 import Pagination from "../Pagination/Pagination";
 import { fetchNotes } from "../../services/noteService";
 import toast from "react-hot-toast";
-import type { FetchNotesResponse } from "../../types/note";
+import type { Note } from "../../types/note";
+
+export interface FetchNotesResponse {
+  notes: Note[];
+  totalPages: number;
+}
 
 export default function App() {
   const [search, setSearch] = useState("");
@@ -23,7 +28,7 @@ export default function App() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [search]);
 
   const { data, isLoading, isError, isSuccess } = useQuery<FetchNotesResponse>({
     queryKey: ["notes", page, debouncedSearch],
@@ -46,11 +51,13 @@ export default function App() {
       <header className={css.toolbar}>
         <SearchBox value={search} onChange={setSearch} />
 
-        <Pagination
-          currentPage={page}
-          pageCount={data?.totalPages ?? 1}
-          onPageChange={setPage}
-        />
+        {data && data.totalPages > 1 && (
+          <Pagination
+            currentPage={page}
+            pageCount={data.totalPages}
+            onPageChange={setPage}
+          />
+        )}
 
         <button className={css.button} onClick={openModal}>
           Create note +
